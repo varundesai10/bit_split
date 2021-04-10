@@ -25,6 +25,20 @@ import tensorflow as tf
 import time
 '''
 
+import requests
+requests.packages.urllib3.disable_warnings()
+import ssl
+
+try:
+    _create_unverified_https_context = ssl._create_unverified_context
+except AttributeError:
+    # Legacy Python that doesn't verify HTTPS certificates by default
+    pass
+else:
+    # Handle target environment that doesn't support HTTPS verification
+    ssl._create_default_https_context = _create_unverified_https_context
+
+
 (x_train, y_train_), (x_test, y_test_) = cifar10.load_data()
 x_train = 2*x_train.astype('float32') / 255 -1  #limits the input from -1 to +1
 x_test = 2*x_test.astype('float32') / 255 -1    
