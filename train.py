@@ -149,6 +149,7 @@ loss = 0
 acc = 0
 
 def fast_backprop_single_sample(x,y,model,loss_fn,opt,temp,acc,lr,refresh_cycle):
+      print('hi there')
       with tf.GradientTape() as tape:
         # Forward pass.
         logits = model(x)
