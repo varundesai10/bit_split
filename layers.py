@@ -4,9 +4,12 @@ from tensorflow.python.ops import nn_ops
 from tensorflow.python.ops import array_ops
 from tensorflow.python.keras.layers.ops import core as core_ops
 
-
+	
 class Conv2D_quant(tf.keras.layers.Layer):
-	def __init__(self,th,filters=16,kernel_size=(3, 3),padding="valid",activation='relu',input_shape = None, dv = False, std_dev = 0.06):
+	def __init__(self,th = 0.1,filters=16,
+				kernel_size=(3, 3),padding="valid",
+				activation='relu',input_shape = None,
+				dv = False, std_dev = 0.06):
 		super(Conv2D_quant, self).__init__()
 		self.filters = filters
 		self.kernel_size=kernel_size
@@ -18,12 +21,15 @@ class Conv2D_quant(tf.keras.layers.Layer):
 		self.std_dev = 0.06
     
 	def build(self,input_shape):
-
-		if self.input_shape1:
-			#self.linear_1 = Conv2D_dv(filters=self.filters,kernel_size=self.kernel_size, std_dev = self.std_dev, padding=self.padding,input_shape = self.input_shape1)
-			self.linear_1 = tf.keras.layers.Conv2D(filters=self.filters,kernel_size=self.kernel_size, padding=self.padding,input_shape = self.input_shape1)
+		if self.dv:
+			if self.input_shape1:
+				self.linear_1 = Conv2D_dv(filters=self.filters,kernel_size=self.kernel_size, std_dev = self.std_dev, padding=self.padding,input_shape = self.input_shape1)
+			else:
+				self.linear_1 = Conv2D_dv(filters=self.filters,kernel_size=self.kernel_size, std_dev = self.std_dev, padding=self.padding,input_shape = [int(input_shape[-1])])
+		
 		else:
-			self.linear_1 = tf.keras.layers.Conv2D(filters=self.filters,kernel_size=self.kernel_size, padding=self.padding,input_shape = [int(input_shape[-1])])
+			i_s = self.input_shape1 if self.input_shape1 is not None else [int(input_shape[-1])]
+			self.linear_1 = tf.keras.layers.Conv2D(filters=self.filters,kernel_size=self.kernel_size, padding=self.padding,input_shape =i_s)
 		self.activation = tf.keras.layers.Activation(self.activation)
  
 	@tf.custom_gradient
@@ -41,20 +47,27 @@ class Conv2D_quant(tf.keras.layers.Layer):
 		return y,backward
 
 class Dense_quant(tf.keras.layers.Layer):
-	def __init__(self, th, num_output, activation = 'relu', input_shape = None, device_variation = False, std_dev = 0.06):
+	def __init__(self, th, num_output, activation = 'relu', input_shape = None, dv = False, std_dev = 0.06):
 		super(Dense_quant, self).__init__()
 		self.num_output = num_output
 		self.activation=activation
 		self.input_shape1 = input_shape
 		self.th = th
-		self.device_variation = device_variation
+		self.dv = dv
 		self.std_dev = std_dev
     
 	def build(self,input_shape):
-		if self.input_shape1:
-			self.linear_1 = tf.keras.layers.Dense(self.num_output,input_shape = self.input_shape1)
+		if not self.dv:
+			if self.input_shape1:
+				self.linear_1 = tf.keras.layers.Dense(self.num_output,input_shape = self.input_shape1)
+			else:
+				self.linear_1 = tf.keras.layers.Dense(self.num_output, input_shape = [int(input_shape[-1])])
+		
 		else:
-			self.linear_1 = tf.keras.layers.Dense(self.num_output, input_shape = [int(input_shape[-1])])
+			if self.input_shape1:
+				self.linear_1 = Dense_dv(self.num_output,input_shape = self.input_shape1, std_dev = self.std_dev)
+			else:
+				self.linear_1 = Dense_dv(self.num_output, input_shape = [int(input_shape[-1])], std_dev = self.std_dev)
 		self.activation = tf.keras.layers.Activation(self.activation)
     
 	@tf.custom_gradient
@@ -188,4 +201,3 @@ class Dense_dv(tf.keras.layers.Dense):
         bias,
         self.activation,
         dtype=self._compute_dtype_object)
-

@@ -47,7 +47,6 @@ def weight_decay(w, msb_width = 9, lsb_width = 5, is_lsb = True):
 
 def update_fast(grad,trainable_weights,lr, refresh_cycle, lsb_width, msb_width, write_noise, std_dev):
 	answer = (grad.copy())
-	print(f"LSB_WIDTH = {lsb_width}, MSB_WIDTH = {msb_width}")
 	for i in range(len(grad)):
 		curr_weights = tf.clip_by_value(trainable_weights[i],clip_value_min=-1, clip_value_max=1)
 		total_width = msb_width+lsb_width
@@ -84,7 +83,8 @@ def fast_backprop_single_sample(x,y,model,loss_fn,opt,temp,acc,lr, msb, lsb, ref
 		opt.apply_gradients(zip(gradients, model.trainable_weights))
 	return temp,acc
 
-def fast_backprop(dataset, dataset_test, epochs, model, loss_fn, opt, msb, lsb, write_noise, std_dev, refresh_freq = 10, load_prev_val = False, base_path = './'):
+def fast_backprop(dataset = None, dataset_test = None, 
+					epochs = 50, model = None, loss_fn = None, opt = None, msb = 9, lsb = 6, write_noise = False, std_dev = 0.02, refresh_freq = 10, load_prev_val = False, base_path = './'):
 	acc_hist = []
 	test_acc = []
 	base_lr = 1e-3
