@@ -84,7 +84,7 @@ def fast_backprop_single_sample(x,y,model,loss_fn,opt,temp,acc,lr, msb, lsb, ref
 	return temp,acc
 
 def fast_backprop(dataset = None, dataset_test = None, 
-					epochs = 50, model = None, loss_fn = None, opt = None, msb = 9, lsb = 6, write_noise = False, std_dev = 0.02, refresh_freq = 10, load_prev_val = False, base_path = './'):
+					epochs = 50, model = None, loss_fn = None, opt = None, msb = 9, lsb = 6, write_noise = False, std_dev = 0.02, refresh_freq = 10, load_prev_val = False, base_path = './', ):
 	acc_hist = []
 	test_acc = []
 	base_lr = 1e-3
