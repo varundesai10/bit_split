@@ -90,6 +90,11 @@ def fast_backprop(dataset = None, dataset_test = None,
 	base_lr = 1e-3
 	weight_suffix = 'weights'
 	accuracy_suffix = 'acc'
+
+	#making the requisite directories
+	os.makedirs(base_path, exist_ok = True)
+	os.makedirs(os.path.join(base_path, accuracy_suffix), exist_ok=True)
+	os.makedirs(os.path.join(base_path, weight_suffix), exist_ok=True)
 	if(load_prev_val):
 		acc_hist = list(pd.read_csv(os.path.join(base_path, 'acc', 'training_acc.csv')).to_numpy()[:,1])
 		test_acc = list(pd.read_csv(os.path.join(base_path, 'acc', 'test_acc.csv')).to_numpy()[:,1])
@@ -116,10 +121,8 @@ def fast_backprop(dataset = None, dataset_test = None,
 				step_float = tf.cast(step,tf.float32)
 				tf.print("Step:", step, "Loss:", float(temp/step_float))
 				tf.print("Train Accuracy: ",acc*100.0/step_float)
-				#model.save_weights(os.path.join(base_path, weight_suffix, 'weights.h5'))
-				tf.print("Weights saved!")
 				acc_hist.append(acc.numpy()*100.0/step_float.numpy())
-				#pd.DataFrame({'acc':acc_hist}).to_csv(os.path.join(base_path, accuracy_suffix, 'training_acc.csv'))
+				pd.DataFrame({'acc':acc_hist}).to_csv(os.path.join(base_path, accuracy_suffix, 'training_acc.csv'))
 
 			if step % 50000 == 49999:
 					step_test = 0
@@ -138,5 +141,7 @@ def fast_backprop(dataset = None, dataset_test = None,
 		
 		step_float = tf.cast(step,tf.float32)
 		pd.DataFrame({'lr': list( [lr.numpy()] ) }).to_csv(os.path.join(base_path, accuracy_suffix, 'learning_rate.csv'))
+		model.save_weights(os.path.join(base_path, weight_suffix, 'weights.h5'))
+		tf.print("Weights saved!")
   
 	return acc_hist

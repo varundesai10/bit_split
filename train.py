@@ -39,7 +39,7 @@ model.build(input_shape=tf.TensorShape([None,32, 32, 3]))
 print(model.summary())
 dataset, dataset_test = build_dataset()
 loss_fn = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False)
-base_path = os.path.join(os.path.abspath("."), args.prefix, "res_{}_{}_{}_{}_{}_{}_{}".format(args.refresh,
+base_path = os.path.join(os.path.abspath("./results/"), args.prefix, "res_{}_{}_{}_{}_{}_{}_{}".format(args.refresh,
                                                                                         args.total_precision, 
                                                                                         args.lsb_precision, 
                                                                                         args.write_noise, 
