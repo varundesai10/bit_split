@@ -124,7 +124,7 @@ def fast_backprop(dataset = None, dataset_test = None,
 				acc_hist.append(acc.numpy()*100.0/step_float.numpy())
 				pd.DataFrame({'acc':acc_hist}).to_csv(os.path.join(base_path, accuracy_suffix, 'training_acc.csv'))
 
-			if step % 50000 == 49999:
+			if step % 50000 == 49999: #test accuracy
 					step_test = 0
 					acc_test = 0.0
 					
