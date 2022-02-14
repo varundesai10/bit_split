@@ -6,19 +6,24 @@ import pandas as pd
 
 s = tf.math.sign
 
-#what does this do? 
+#For truncation
 def truncate(grad,bit_width):
 	return tf.math.round(grad*(2.0**bit_width))/(2.0**bit_width)
  
-# @tf.function
+#For Quantization
 def quantize(grad,bit_width):
 	sign_p = tf.math.sign(grad)
 	temp = tf.math.abs(grad)
 	answer = tf.floor(temp*(2.0**bit_width))/(2.0**bit_width)
 	return tf.math.multiply(answer, sign_p)
 
+#if you ask how truncation and quantization are different, I'm with you mate
+
 def weight_decay(w, msb_width = 9, lsb_width = 5, is_lsb = True):
-	#y = Ae^-bx + y_0
+  '''
+  Calculates the weight decay which is basically a regression on an exponential decay curve. Was used when working with
+  volatile transistors.
+  '''
   total_width = msb_width + lsb_width
   
   answer = w.copy()
@@ -46,14 +51,20 @@ def weight_decay(w, msb_width = 9, lsb_width = 5, is_lsb = True):
   return answer 
 
 def update_fast(grad,trainable_weights,lr, refresh_cycle, lsb_width, msb_width, write_noise, std_dev):
+	'''
+	Calculates the gradient, and updates the weight values, clips them, and then quantizes them. 
+	'''
 	answer = (grad.copy())
 	for i in range(len(grad)):
 		curr_weights = tf.clip_by_value(trainable_weights[i],clip_value_min=-1, clip_value_max=1)
 		total_width = msb_width+lsb_width
+		#weights close to 0 are set to zero
 		curr_weights = curr_weights * ( tf.math.sign ( tf.math.abs(curr_weights) - (2**(-total_width)-2**(-total_width-5)) ) +1 )/2
 		update_w = lr*grad[i]
 		weight_msb = truncate(curr_weights,msb_width)
 		weight_lsb = truncate(curr_weights-weight_msb,total_width)
+
+		#we can only apply the update to the LSB, which ranges from -2**(-m) to 2**(-m)
 		update_w = tf.clip_by_value(update_w,-2**(-msb_width),2**(-msb_width))
 
 		update_w = quantize(update_w, total_width)
@@ -65,8 +76,8 @@ def update_fast(grad,trainable_weights,lr, refresh_cycle, lsb_width, msb_width, 
 		refresh_term = (2**(-total_width))*(refresh_cycle/2.0)*( tf.math.sign(weight_lsb-(-max_lsb + 2**(-total_width-5))) + tf.math.sign(weight_lsb-(max_lsb-2**(-total_width-5))))
 		#if the w_lsb is close to -max_lsb or +max_lsb then we update it to a lower or higher value.
 		answer[i] =  -(tf.convert_to_tensor(weight_msb + weight_lsb+refresh_term)-trainable_weights[i])
-		#if(write_noise):
-		#	answer[i] = tf.math.multiply(answer[i], tf.random.normal(answer[i].shape, 1, std_dev))
+		if(write_noise):
+			answer[i] = tf.math.multiply(answer[i], tf.random.normal(answer[i].shape, 1, std_dev))
 	return answer
 
 @tf.function      

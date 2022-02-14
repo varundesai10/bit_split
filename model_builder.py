@@ -3,6 +3,9 @@ from tensorflow.keras.layers import Dropout, MaxPool2D, Flatten, ZeroPadding2D
 from layers import Dense_quant, Conv2D_quant
 
 def build_model(th = 0.1, shape = 1, act = 'selu', dv = False, std_dev = 0.06):
+    '''
+    Builds the model, layer by layer.
+    '''
     filter_shape = (2*shape+1,2*shape+1)
     model = tf.keras.models.Sequential()
     model.add(Dropout(.4))

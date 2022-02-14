@@ -6,6 +6,9 @@ from tensorflow.python.keras.layers.ops import core as core_ops
 
 	
 class Conv2D_quant(tf.keras.layers.Layer):
+	'''
+	The class which implements the thresholding of the input in the gradient calculation, for convlutional layers.
+	'''
 	def __init__(self,th = 0.1,filters=16,
 				kernel_size=(3, 3),padding="valid",
 				activation='relu',input_shape = None,
@@ -85,6 +88,10 @@ class Dense_quant(tf.keras.layers.Layer):
 		return y,backward
 
 class Conv2D_dv(tf.keras.layers.Conv2D):
+	'''Adds device varitaions to the convolutional network, by keeping a fixed set of random constants which 
+	are multiplied to the kernel at every step of the forward computation, but these multiplications are not
+	accounted for when calculating the gradients. Inherites teh Conv2D class which is a part of the keras framework
+	and modifies some key functions.'''
 	def __init__(self,
                filters,
                kernel_size,
@@ -160,6 +167,7 @@ class Conv2D_dv(tf.keras.layers.Conv2D):
 		return outputs 
 
 class Dense_dv(tf.keras.layers.Dense):
+	'''Does basically what the Conv2D_dv class does, but for Dense layers.'''
 	def __init__(self,
                units,
 			   std_dev = 0.06,
