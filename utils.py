@@ -64,7 +64,7 @@ def update_fast(grad,trainable_weights,lr, refresh_cycle, lsb_width, msb_width, 
 		weight_msb = truncate(curr_weights,msb_width)
 		weight_lsb = truncate(curr_weights-weight_msb,total_width)
 
-		#we can only apply the update to the LSB, which ranges from -2**(-m) to 2**(-m)
+		#we can only apply the update to the LSB, which ranges from -2**(-m-1) to 2**(-m-1)
 		update_w = tf.clip_by_value(update_w,-2**(-msb_width),2**(-msb_width))
 
 		update_w = quantize(update_w, total_width)
