@@ -16,7 +16,7 @@ parser.add_argument('-t', '--total_precision', help = "Total Bit Width", type = 
 parser.add_argument('-l', '--lsb_precision', help = "LSB_precision", type = int, default = 6)
 parser.add_argument('-L', '--load_prev', help = "Load Previous Weight values", action = 'store_true')
 parser.add_argument('-P', '--prefix', help = "Prefix to where the results are stored", type = str, default = "")
-
+parser.add_argument('-S', '--dataset', help = "which dataset to use", type = str, default = "cifar10")
 args = parser.parse_args()
 
 #fixing errors which occur on HPC
@@ -29,15 +29,19 @@ else:
     # Handle target environment that doesn't support HTTPS verification
     ssl._create_default_https_context = _create_unverified_https_context
 
- 
-model = build_model(th = 0.1, dv = args.device_variation, std_dev = args.device_std_dev)
+
+model = build_model(th = 0.1, dv = args.device_variation, std_dev = args.device_std_dev, add_zero_pad = (not args.dataset == "cifar10"))
 opt = tf.keras.optimizers.SGD(learning_rate=1)
 model.compile(optimizer=opt,
              loss='categorical_crossentropy',
              metrics=['accuracy'])
-model.build(input_shape=tf.TensorShape([None,32, 32, 3]))
+
+if("mnist" in args.dataset):
+    model.build(input_shape = tf.TensorShape([None, 28, 28, 1]))
+else:
+    model.build(input_shape=tf.TensorShape([None,32, 32, 3]))
 print(model.summary())
-dataset, dataset_test = build_dataset()
+dataset, dataset_test = build_dataset(args.dataset)
 loss_fn = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False)
 base_path = os.path.join(os.path.abspath("./results/"), args.prefix, "res_{}_{}_{}_{}_{}_{}_{}".format(args.refresh,
                                                                                         args.total_precision, 
