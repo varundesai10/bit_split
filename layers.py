@@ -140,7 +140,7 @@ class Conv2D_dv(tf.keras.layers.Conv2D):
 			inputs = array_ops.pad(inputs, self._compute_causal_padding(inputs))
 
 		kernel_ = self.kernel + tf.stop_gradient(tf.multiply(self.kernel, self.kernel_dv) - self.kernel)
-		bias_ = self.bias + tf.stop_gradient(tf.multiply(self.bias, self.bias) - self.bias)
+		bias_ = self.bias + tf.stop_gradient(tf.multiply(self.bias, self.bias_dv) - self.bias)
 		outputs = self._convolution_op(inputs, kernel_)
 
 		if self.use_bias:
