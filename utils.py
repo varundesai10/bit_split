@@ -50,7 +50,7 @@ def weight_decay(w, msb_width = 9, lsb_width = 5, is_lsb = True):
   #return -((w_msb + answer) - w), tf.reduce_mean(tf.abs(w - answer))
   return answer 
 
-def update_fast(grad,trainable_weights,lr, refresh_cycle, lsb_width, msb_width, write_noise, std_dev):
+def update_fast(grad,trainable_weights,lr, refresh_cycle, lsb_width, msb_width, write_noise, std_dev, w_change = 0.0):
 	'''
 	Calculates the gradient, and updates the weight values, clips them, and then quantizes them. 
 	'''
@@ -78,10 +78,11 @@ def update_fast(grad,trainable_weights,lr, refresh_cycle, lsb_width, msb_width, 
 		answer[i] =  -(tf.convert_to_tensor(weight_msb + weight_lsb+refresh_term)-trainable_weights[i])
 		if(write_noise):
 			answer[i] = tf.math.multiply(answer[i], tf.random.normal(answer[i].shape, 1, std_dev))
-	return answer
+		w_change += tf.reduce_sum(tf.abs(answer[i]))
+	return answer, w_change
 
 @tf.function      
-def fast_backprop_single_sample(x,y,model,loss_fn,opt,temp,acc,lr, msb, lsb, refresh_cycle,write_noise=False, std_dev=0.02): 
+def fast_backprop_single_sample(x,y,model,loss_fn,opt,temp,acc,lr, msb, lsb, refresh_cycle,write_noise=False, std_dev=0.02, w_change = 0.0): 
 	with tf.GradientTape() as tape:
 		logits = model(x) #Forward Pass
 		loss = loss_fn(y, logits) #Getting Loss
@@ -90,15 +91,17 @@ def fast_backprop_single_sample(x,y,model,loss_fn,opt,temp,acc,lr, msb, lsb, ref
 		pred = (tf.equal(tf.math.argmax(logits,1),y_int64))
 		acc = tf.cond(pred, lambda: tf.add(acc,1), lambda: tf.add(acc,0))
 		gradients = tape.gradient(loss, model.trainable_weights) #get gradients
-		gradients = update_fast(gradients,model.trainable_weights,lr, refresh_cycle, lsb, msb, write_noise, std_dev)
+		gradients, w_change = update_fast(gradients,model.trainable_weights,lr, refresh_cycle, lsb, msb, write_noise, std_dev, w_change)
 		opt.apply_gradients(zip(gradients, model.trainable_weights))
-	return temp,acc
+	return temp,acc,w_change
 
 def fast_backprop(dataset = None, dataset_test = None, 
 					epochs = 50, model = None, loss_fn = None, opt = None, msb = 9, lsb = 6, write_noise = False, std_dev = 0.02, refresh_freq = 10, load_prev_val = False, base_path = './', ):
 	acc_hist = []
 	test_acc = []
+	w_change_hist = []
 	base_lr = 1e-3
+	w_change = 0.0
 	weight_suffix = 'weights'
 	accuracy_suffix = 'acc'
 
@@ -110,6 +113,7 @@ def fast_backprop(dataset = None, dataset_test = None,
 		acc_hist = list(pd.read_csv(os.path.join(base_path, 'acc', 'training_acc.csv')).to_numpy()[:,1])
 		test_acc = list(pd.read_csv(os.path.join(base_path, 'acc', 'test_acc.csv')).to_numpy()[:,1])
 		base_lr = pd.read_csv(os.path.join(base_path, 'acc', 'learning_rate.csv')).to_numpy()[0,1]
+		w_change_hist = list(pd.read_csv(os.path.join(base_path, 'acc', 'weight_change.csv')).to_numpy()[:,1])
 		tf.print("Base lr =", base_lr, "acc_hist = ", acc_hist, "test_acc = ", test_acc);
   
 	for epoch in range(epochs):
@@ -117,6 +121,7 @@ def fast_backprop(dataset = None, dataset_test = None,
 		tm = time.time()
 		acc = 0.0
 		temp = 0.0
+		w_change = 0.0
 		iterator = iter(dataset)
 		lr = base_lr*(0.985**(tf.math.floor(epoch/1.0)))
 		print("Learning rate = ", lr.numpy())
@@ -124,7 +129,7 @@ def fast_backprop(dataset = None, dataset_test = None,
 		for step in range(len(dataset)):
 			x,y = iterator.get_next()
 			refresh_cycle = 1 if step % refresh_freq == 0 else 0;
-			temp,acc = fast_backprop_single_sample(x,y,model,loss_fn,opt,temp,acc,lr,msb, lsb, refresh_cycle, write_noise, std_dev)
+			temp,acc,w_change = fast_backprop_single_sample(x,y,model,loss_fn,opt,temp,acc,lr,msb, lsb, refresh_cycle, write_noise, std_dev, w_change)
 
 			if step%1000 == 999: #printing stuff
 				tf.print("Time taken: ",time.time()-tm)
@@ -132,8 +137,12 @@ def fast_backprop(dataset = None, dataset_test = None,
 				step_float = tf.cast(step,tf.float32)
 				tf.print("Step:", step, "Loss:", float(temp/step_float))
 				tf.print("Train Accuracy: ",acc*100.0/step_float)
+				tf.print("Average Weight Change: ", w_change)
 				acc_hist.append(acc.numpy()*100.0/step_float.numpy())
+				w_change_hist.append(w_change.numpy())
 				pd.DataFrame({'acc':acc_hist}).to_csv(os.path.join(base_path, accuracy_suffix, 'training_acc.csv'))
+				pd.DataFrame({'wc':w_change_hist}).to_csv(os.path.join(base_path, accuracy_suffix, 'weight_change.csv'))
+				w_change = 0.0;
 
 			if step % 50000 == 49999: #test accuracy
 					step_test = 0
