@@ -68,6 +68,7 @@ def update_fast(grad,trainable_weights,lr, refresh_cycle, lsb_width, msb_width, 
 		update_w = tf.clip_by_value(update_w,-2**(-msb_width),2**(-msb_width))
 
 		update_w = quantize(update_w, total_width)
+		w_change += tf.reduce_sum(tf.square(tf.abs(update_w)))
 
 		weight_lsb = weight_lsb - update_w
 		# max_lsb = 2**(-msb_width) - 2**(-total_width)
@@ -78,7 +79,7 @@ def update_fast(grad,trainable_weights,lr, refresh_cycle, lsb_width, msb_width, 
 		answer[i] =  -(tf.convert_to_tensor(weight_msb + weight_lsb+refresh_term)-trainable_weights[i])
 		if(write_noise):
 			answer[i] = tf.math.multiply(answer[i], tf.random.normal(answer[i].shape, 1, std_dev))
-		w_change += tf.reduce_sum(tf.abs(answer[i]))
+		
 	return answer, w_change
 
 @tf.function      
