@@ -59,7 +59,7 @@ def update_fast(grad,trainable_weights,lr, refresh_cycle, lsb_width, msb_width, 
 		curr_weights = tf.clip_by_value(trainable_weights[i],clip_value_min=-1, clip_value_max=1)
 		total_width = msb_width+lsb_width
 		#weights close to 0 are set to zero
-		curr_weights = curr_weights * ( tf.math.sign ( tf.math.abs(curr_weights) - (2**(-total_width)-2**(-total_width-5)) ) +1 )/2
+		curr_weights = curr_weights * ( tf.math.sign ( tf.math.abs(curr_weights) - (2**(-total_width)-2**(-total_width-5)) ) +1 )/2 #sets weights very close to zero to zero
 		update_w = lr*grad[i]
 		weight_msb = truncate(curr_weights,msb_width)
 		weight_lsb = truncate(curr_weights-weight_msb,total_width)
@@ -73,8 +73,11 @@ def update_fast(grad,trainable_weights,lr, refresh_cycle, lsb_width, msb_width, 
 		weight_lsb = weight_lsb - update_w
 		# max_lsb = 2**(-msb_width) - 2**(-total_width)
 		max_lsb = 2**(-msb_width-1)
-		weight_lsb = tf.clip_by_value(weight_lsb,-max_lsb,max_lsb)
-		refresh_term = (2**(-total_width))*(refresh_cycle/2.0)*( tf.math.sign(weight_lsb-(-max_lsb + 2**(-total_width-5))) + tf.math.sign(weight_lsb-(max_lsb-2**(-total_width-5))))
+		weight_lsb = tf.clip_by_value(weight_lsb,-max_lsb,max_lsb) 
+
+		# if lsb is at extreme values, then propagate the update to the MSB, set lsb to zero:
+		refresh_term = (2**(-total_width))*(refresh_cycle/2.0)*( tf.math.sign(weight_lsb-(-max_lsb + 2**(-total_width-5))) + tf.math.sign(weight_lsb-(max_lsb-2**(-total_width-5)))) 
+		
 		#if the w_lsb is close to -max_lsb or +max_lsb then we update it to a lower or higher value.
 		answer[i] =  -(tf.convert_to_tensor(weight_msb + weight_lsb+refresh_term)-trainable_weights[i])
 		if(write_noise):

@@ -6,6 +6,9 @@ import ssl
 from get_dataset import *
 import argparse
 
+#tf version 2.4.0 needed to run. won't run on other versions of tf.
+#example: python3 train.py -r 10 -W -w 0.06 -D -d 0.04 -t 15 -l 6 -L -S "mnist"
+
 parser = argparse.ArgumentParser()
 parser.add_argument('-r', '--refresh', help = "Refresh Cycle Frequency", type = int, default = 10)
 parser.add_argument('-W', '--write_noise', help = "Add write noise", action = 'store_true')
